@@ -12,14 +12,20 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
-        android:id="@+id/nav_gallery"
-        android:name="com.example.gawatcher.ui.gallery.GalleryFragment"
-        android:label="@string/menu_gallery"
-        tools:layout="@layout/fragment_gallery" />
+        android:id="@+id/nav_favorites"
+        android:name="com.example.gawatcher.ui.favorites.FavoritesFragment"
+        android:label="@string/menu_favorites"
+        tools:layout="@layout/fragment_favorites" />
 
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="com.example.gawatcher.ui.slideshow.SlideshowFragment"
-        android:label="@string/menu_slideshow"
-        tools:layout="@layout/fragment_slideshow" />
+        android:id="@+id/nav_alerts"
+        android:name="com.example.gawatcher.ui.alerts.AlertsFragment"
+        android:label="@string/menu_alerts"
+        tools:layout="@layout/fragment_alerts" />
+
+    <fragment
+    android:id="@+id/nav_settings"
+    android:name="com.example.gawatcher.ui.settings.SettingsFragment"
+    android:label="@string/menu_settings"
+    tools:layout="@layout/fragment_settings" />
 </navigation>
