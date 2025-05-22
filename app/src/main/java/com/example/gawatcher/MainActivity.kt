@@ -1,6 +1,7 @@
 package com.example.gawatcher
 
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
@@ -12,6 +13,11 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.example.gawatcher.databinding.ActivityMainBinding
+import com.example.gawatcher.gendykey._apikey
+import com.example.gawatcher.model.remote.RemoteDataSource
+import com.example.gawatcher.model.repo.DataRepo
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,6 +49,18 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        val remoteData = RemoteDataSource();
+        val dataRepo = DataRepo.getInstance(remoteData)
+        GlobalScope.launch {
+            val result = dataRepo.getWeatherForecast(44.34,10.99 , apiKey = _apikey  )
+            if(result.isSuccess) {
+                Log.i("gendyishere", "Success: ${result.getOrNull()}")
+
+            }
+        }
+
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

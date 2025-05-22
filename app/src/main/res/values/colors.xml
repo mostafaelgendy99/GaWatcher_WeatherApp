@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="blue">#2196F3</color> <!-- A vibrant blue (Material Design Blue 500) -->
+    <color name="light_black">#424242</color> <!-- A light black (Material Design Grey 800) -->
+    <color name="blue_dark">#1976D2</color> <!-- A darker shade of blue for primaryDark -->
+    <color name="blue_light">#BBDEFB</color> <!-- A lighter shade of blue for accents -->
 </resources>
