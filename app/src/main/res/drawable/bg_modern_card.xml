@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Light neutral background (Material surface color) -->
+    <solid android:color="#FFFFFFFF" />
+
+    <!-- Rounded corners -->
+    <corners android:radius="20dp" />
+
+    <!-- Optional thin border for visual separation -->
+    <stroke
+        android:width="0.8dp"
+        android:color="#1F000000" /> <!-- Light translucent black -->
+</shape>
