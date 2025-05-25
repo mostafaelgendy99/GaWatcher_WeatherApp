@@ -1,13 +1,13 @@
 package com.example.gawatcher.ui.home
 
-import android.annotation.SuppressLint
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gawatcher.gendykey._apikey
-import com.example.gawatcher.model.pojos.WeatherFourDays
+import com.example.gawatcher.model.pojos.WeatherCurrent
+import com.example.gawatcher.model.pojos.WeatherFiveDays
 import com.example.gawatcher.model.repo.DataRepo
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -16,19 +16,18 @@ import java.util.Date
 import java.util.Locale
 
 data class WeatherUiState(
-    val cityName: String = "Modena",
+    val cityName: String = "Cairo",
     val temperature: String = "--°C",
     val weatherCondition: String = "Unknown",
     val wind: String = "-- km/h",
     val pressure: String = "-- hPa",
     val humidity: String = "--%",
-    val uvIndex: String = "--",
+    val feelsLike: String = "--°C",
+    val iconUrl: String = "ic_10d", // Added iconUrl with default
     val errorMessage: String? = null
 )
+
 class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
-    companion object {
-        const val DEFAULT_ICON_URL = "http://openweathermap.org/img/wn/01d@2x.png"
-    }
 
     private val _uiState = MutableLiveData<WeatherUiState>()
     val uiState: LiveData<WeatherUiState> = _uiState
@@ -40,27 +39,58 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
     val dailyForecast: LiveData<List<DailyForecastItem>> = _dailyForecast
 
     init {
-        fetchWeatherFourDays()
+        // Initialize with error message until location is provided
+        _uiState.value = WeatherUiState(
+            errorMessage = "Location needed to show weather data. Please grant location access."
+        )
+        _hourlyForecast.value = emptyList()
+        _dailyForecast.value = emptyList()
     }
 
-    fun fetchWeatherFourDays() {
+    fun updateLocation(latitude: Double, longitude: Double) {
+        Log.d("HomeViewModel", "Received location: Lat=$latitude, Long=$longitude")
+        fetchWeatherData(latitude, longitude)
+    }
+
+    private fun fetchWeatherData(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
-                Log.d("HomeViewModel", "Fetching weather for lat=44.34, lon=10.99")
-                val result = dataRepo.getWeatherForecast(
-                    latitude = 44.34,
-                    longitude = 10.99,
+                Log.d("HomeViewModel", "Fetching weather for lat=$latitude, lon=$longitude")
+                // Fetch current weather
+                val currentWeatherResult = dataRepo.getCurrentWeather(
+                    latitude = latitude,
+                    longitude = longitude,
                     apiKey = _apikey
                 )
-                result.onSuccess { weatherFourDays ->
-                    processWeatherData(weatherFourDays)
-                }.onFailure { error ->
+                // Fetch forecast
+                val forecastResult = dataRepo.getWeatherForecast(
+                    latitude = latitude,
+                    longitude = longitude,
+                    apiKey = _apikey
+                )
+                if (currentWeatherResult.isSuccess && forecastResult.isSuccess) {
+                    val currentWeather = currentWeatherResult.getOrNull()
+                    val weatherFiveDays = forecastResult.getOrNull()
+                    if (currentWeather != null && weatherFiveDays != null) {
+                        processWeatherData(currentWeather, weatherFiveDays)
+                    } else {
+                        _uiState.postValue(
+                            WeatherUiState(errorMessage = "No weather data available")
+                        )
+                        _hourlyForecast.postValue(emptyList())
+                        _dailyForecast.postValue(emptyList())
+                        Log.e("HomeViewModel", "No current weather or forecast data")
+                    }
+                } else {
+                    val errorMessage = currentWeatherResult.exceptionOrNull()?.message
+                        ?: forecastResult.exceptionOrNull()?.message
+                        ?: "Network error"
                     _uiState.postValue(
-                        WeatherUiState(errorMessage = error.message ?: "Network error")
+                        WeatherUiState(errorMessage = errorMessage)
                     )
                     _hourlyForecast.postValue(emptyList())
                     _dailyForecast.postValue(emptyList())
-                    Log.e("HomeViewModel", "Fetch failed: ${error.message}", error)
+                    Log.e("HomeViewModel", "Fetch failed: $errorMessage")
                 }
             } catch (e: Exception) {
                 _uiState.postValue(
@@ -73,36 +103,29 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         }
     }
 
-    private fun processWeatherData(weatherFourDays: WeatherFourDays) {
+    private fun processWeatherData(currentWeather: WeatherCurrent, weatherFiveDays: WeatherFiveDays) {
         // Current weather
-        val currentWeather = weatherFourDays.list.firstOrNull()
-        if (currentWeather != null && weatherFourDays.city != null) {
-            _uiState.postValue(
-                WeatherUiState(
-                    cityName = weatherFourDays.city.name ?: "Modena",
-                    temperature = String.format("%.0f°C", currentWeather.main.temp),
-                    weatherCondition = currentWeather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
-                    wind = String.format("%.1f km/h", currentWeather.wind.speed * 3.6),
-                    pressure = "${currentWeather.main.pressure} hPa",
-                    humidity = "${currentWeather.main.humidity}%",
-                    uvIndex = "N/A",
-                    errorMessage = null
-                )
+        _uiState.postValue(
+            WeatherUiState(
+                cityName = currentWeather.name ?: "current location",
+                temperature = String.format("%.0f°C", currentWeather.main.temp),
+                weatherCondition = currentWeather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
+                wind = String.format("%.1f km/h", currentWeather.wind.speed * 3.6),
+                pressure = "${currentWeather.main.pressure} hPa",
+                humidity = "${currentWeather.main.humidity}%",
+                feelsLike = String.format("%.0f°C", currentWeather.main.feelsLike), // Replaced uvIndex with feelsLike
+                iconUrl = currentWeather.weather.firstOrNull()?.icon?.let { "ic_$it" } ?: "ic_01d",
+                errorMessage = null
             )
-            Log.d("HomeViewModel", "Current: temp=${currentWeather.main.temp}, condition=${currentWeather.weather.firstOrNull()?.description}")
-        } else {
-            _uiState.postValue(
-                WeatherUiState(errorMessage = "No current weather data or city info")
-            )
-            Log.e("HomeViewModel", "No current weather data or city info")
-        }
+        )
+        Log.d("HomeViewModel", "Current: temp=${currentWeather.main.temp}, condition=${currentWeather.weather.firstOrNull()?.description}, icon=${currentWeather.weather.firstOrNull()?.icon}")
 
-        // Hourly forecast (next 8 hours)
+        // Hourly forecast (next 24 hours, limited to 8 items)
         val currentTime = System.currentTimeMillis() / 1000 // Current time in seconds
-        val hourlyItems = weatherFourDays.list
+        val hourlyItems = weatherFiveDays.list
             .filter { data ->
                 val timeUnix = data.timeUnix
-                timeUnix >= currentTime && timeUnix <= currentTime + 8 * 3600 // Within next 8 hours
+                timeUnix >= currentTime && timeUnix <= currentTime + 24 * 3600 // Within next 24 hours
             }
             .take(8) // Ensure max 8 items
             .mapNotNull { data ->
@@ -110,7 +133,7 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
                 val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(
                     Date(data.timeUnix * 1000)
                 )
-                val iconUrl = "http://openweathermap.org/img/wn/$icon@2x.png"
+                val iconUrl = "ic_$icon"
                 HourlyForecastItem(
                     time = time,
                     temperature = String.format("%.0f°C", data.main.temp),
@@ -120,18 +143,18 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         _hourlyForecast.postValue(hourlyItems)
         Log.d("HomeViewModel", "Hourly forecast: ${hourlyItems.size} items")
 
-        // Daily forecast (4 days, with min/max temp and weather state)
+        // Daily forecast (5 days, with min/max temp and weather state)
         val dailyItems = mutableListOf<DailyForecastItem>()
         val calendar = Calendar.getInstance()
         val dateFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
-        weatherFourDays.list
+        weatherFiveDays.list
             .groupBy { data ->
                 calendar.timeInMillis = data.timeUnix * 1000
                 calendar.get(Calendar.DAY_OF_YEAR)
             }
             .toSortedMap()
             .values
-            .take(4)
+            .take(5)
             .forEach { dayData ->
                 // Find representative data (around noon) for weather state and icon
                 val noonData = dayData.minByOrNull { data ->
@@ -147,7 +170,7 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
                     val icon = data.weather.firstOrNull()?.icon ?: return@let
                     val weatherState = data.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown"
                     val date = dateFormat.format(Date(data.timeUnix * 1000))
-                    val iconUrl = "http://openweathermap.org/img/wn/$icon@2x.png"
+                    val iconUrl = "ic_$icon"
                     dailyItems.add(
                         DailyForecastItem(
                             date = date,

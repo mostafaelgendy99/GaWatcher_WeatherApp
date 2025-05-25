@@ -12,6 +12,8 @@ import com.example.gawatcher.databinding.ItemDailyForecastBinding
 class DailyForecastAdapter :
     ListAdapter<DailyForecastItem, DailyForecastAdapter.ViewHolder>(DailyForecastDiffCallback()) {
 
+    inner class ViewHolder(val binding: ItemDailyForecastBinding) : RecyclerView.ViewHolder(binding.root)
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemDailyForecastBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -20,22 +22,23 @@ class DailyForecastAdapter :
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position))
-    }
-
-    class ViewHolder(private val binding: ItemDailyForecastBinding) :
-        RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: DailyForecastItem) {
-            binding.tvDate.text = item.date
-            binding.tvWeatherState.text = item.weatherState
-            binding.tvMinTemp.text = item.minTemp
-            binding.tvMaxTemp.text = item.maxTemp
-            val iconUrl = item.iconUrl.takeIf { it.isNotBlank() } ?: HomeViewModel.DEFAULT_ICON_URL
-            Glide.with(binding.ivWeatherIcon.context)
-                .load(iconUrl)
+        val item = getItem(position)
+        with(holder.binding) {
+            tvDate.text = item.date
+            tvWeatherState.text = item.weatherState
+            tvMinTemp.text = item.minTemp
+            tvMaxTemp.text = item.maxTemp
+            val iconUrl = item.iconUrl
+            val iconId = root.context.resources.getIdentifier(
+                iconUrl,
+                "drawable",
+                root.context.packageName
+            )
+            Glide.with(ivWeatherIcon.context)
+                .load(iconId)
                 .placeholder(R.drawable.icon_01d)
                 .error(R.drawable.icon_01d)
-                .into(binding.ivWeatherIcon)
+                .into(ivWeatherIcon)
         }
     }
 

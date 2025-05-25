@@ -68,4 +68,10 @@ dependencies {
     implementation ("com.squareup.retrofit2:retrofit:2.11.0")
     implementation ("com.squareup.retrofit2:converter-gson:2.11.0")
 
+    implementation ("org.osmdroid:osmdroid-android:6.1.10") //added for maps functionality
+    implementation("com.google.android.gms:play-services-location:21.1.0") //added for location functionality
+
+
+
+
 }

@@ -1,7 +1,7 @@
 package com.example.gawatcher.model.pojos
 import com.google.gson.annotations.SerializedName
 
-    data class WeatherFourDays(
+    data class WeatherFiveDays(
         @SerializedName("cod") val codeNoError: String,
         @SerializedName("message") val message: Long,
         @SerializedName("cnt") val totalHoursCount: Long,

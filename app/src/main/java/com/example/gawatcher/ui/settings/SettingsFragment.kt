@@ -7,12 +7,12 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.example.gawatcher.databinding.FragmentAlertsBinding
+import com.example.gawatcher.databinding.FragmentSettingsBinding
 import com.example.gawatcher.ui.settings.SettingsViewModel
 
 class SettingsFragment : Fragment() {
 
-    private var _binding: FragmentAlertsBinding? = null
+    private var _binding: FragmentSettingsBinding? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -26,13 +26,10 @@ class SettingsFragment : Fragment() {
         val settingsViewModel =
             ViewModelProvider(this).get(SettingsViewModel::class.java)
 
-        _binding = FragmentAlertsBinding.inflate(inflater, container, false)
+        _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        val textView: TextView = binding.textAlerts
-        settingsViewModel.text.observe(viewLifecycleOwner) {
-            textView.text = it
-        }
+
         return root
     }
 
