@@ -71,6 +71,13 @@ dependencies {
     implementation ("org.osmdroid:osmdroid-android:6.1.10") //added for maps functionality
     implementation("com.google.android.gms:play-services-location:21.1.0") //added for location functionality
 
+    implementation ("org.osmdroid:osmdroid-android:6.1.18") //added for open street map
+
+
+
+    implementation ("com.google.code.gson:gson:2.10.1")
+    implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0") //added for swipe refresh layout
+
 
 
 

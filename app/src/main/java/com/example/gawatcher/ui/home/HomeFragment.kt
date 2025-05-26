@@ -11,12 +11,18 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.example.gawatcher.MainActivity
 import com.example.gawatcher.R
 import com.example.gawatcher.databinding.FragmentHomeBinding
+import com.example.gawatcher.model.local.LocalDataSource
+import com.example.gawatcher.model.local.WeatherDatabase
+import com.example.gawatcher.model.remote.RemoteDataSource
+import com.example.gawatcher.model.repo.DataRepo
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -28,20 +34,35 @@ class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-    private lateinit var viewModel: HomeViewModel
     private lateinit var hourlyAdapter: HourlyForecastAdapter
     private lateinit var dailyAdapter: DailyForecastAdapter
     private lateinit var fusedLocationClient: FusedLocationProviderClient //location client for getting user's location
     private val LOCATION_PERMISSION_CODE = 100 //location permission request code
+    private var lat = arguments?.getDouble("latitude", 0.0)?: 0.0
+    private var lon = arguments?.getDouble("longitude", 0.0)?: 0.0
+
+    private val viewModel: HomeViewModel by viewModels {
+        HomeViewModelFactory(
+            DataRepo.getInstance(
+                RemoteDataSource(),
+                LocalDataSource(WeatherDatabase.getDatabase(requireContext()).weatherDao())
+            )
+        )
+    }
+
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        lat = arguments?.getDouble("latitude", 0.0)?: 0.0
+        lon = arguments?.getDouble("longitude", 0.0)?: 0.0
+
+
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         try {
-            viewModel = ViewModelProvider(this, HomeViewModelFactory()).get(HomeViewModel::class.java)
             hourlyAdapter = HourlyForecastAdapter()
             dailyAdapter = DailyForecastAdapter()
 
@@ -93,8 +114,26 @@ class HomeFragment : Fragment() {
                 Log.d("HomeFragment", "Daily forecast updated: ${dailyItems.size} items")
             }
 
-            fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-            checkAndRequestLocationPermissions()
+            binding.swipeRefreshLayout.setOnRefreshListener {
+            // Reset lat/lon from bundle (or 0 if not present)
+                lat  = 0.0
+                lon = 0.0
+                fusedLocationClient =
+                    LocationServices.getFusedLocationProviderClient(requireActivity())
+                checkAndRequestLocationPermissions()
+                // Stop refreshing in callback inside location result
+                binding.swipeRefreshLayout.isRefreshing = false
+
+            }
+
+            if (lat != 0.0 && lon != 0.0) {
+                viewModel.updateLocation(lat, lon)
+            }
+            else {
+                fusedLocationClient =
+                    LocationServices.getFusedLocationProviderClient(requireActivity())
+                checkAndRequestLocationPermissions()
+            }
 
         } catch (e: Exception) {
             Log.e("HomeFragment", "Error in onCreateView: ${e.message}", e)

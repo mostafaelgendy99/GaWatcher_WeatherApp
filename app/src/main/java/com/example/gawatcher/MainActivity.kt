@@ -12,8 +12,12 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.gawatcher.databinding.ActivityMainBinding
 import com.example.gawatcher.gendykey._apikey
+import com.example.gawatcher.model.local.LocalDataSource
+import com.example.gawatcher.model.local.WeatherDao
+import com.example.gawatcher.model.local.WeatherDatabase
 import com.example.gawatcher.model.remote.RemoteDataSource
 import com.example.gawatcher.model.repo.DataRepo
 import kotlinx.coroutines.GlobalScope
@@ -23,6 +27,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    lateinit var  dataRepo : DataRepo
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,15 +49,15 @@ class MainActivity : AppCompatActivity() {
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_home, R.id.nav_favorites, R.id.nav_alerts , R.id.nav_settings
+                R.id.nav_home, R.id.nav_favorites, R.id.nav_alerts , R.id.nav_settings , R.id.nav_map
             ), drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        val remoteData = RemoteDataSource();
-        val dataRepo = DataRepo.getInstance(remoteData)
-        GlobalScope.launch {
+         dataRepo =  DataRepo.getInstance(  RemoteDataSource() , LocalDataSource(WeatherDatabase.getDatabase(this).weatherDao()) )
+
+        lifecycleScope.launch {
             val result = dataRepo.getWeatherForecast(44.34,10.99 , apiKey = _apikey  )
             if(result.isSuccess) {
                 Log.i("gendyishere", "Success: ${result.getOrNull()}")
