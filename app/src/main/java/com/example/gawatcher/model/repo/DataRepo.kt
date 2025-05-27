@@ -3,6 +3,7 @@ package com.example.gawatcher.model.repo
 import android.util.Log
 import com.example.gawatcher.model.local.LocalDataSource
 import com.example.gawatcher.model.pojos.WeatherCurrent
+import com.example.gawatcher.model.pojos.WeatherEntity
 import com.example.gawatcher.model.pojos.WeatherFiveDays
 import com.example.gawatcher.model.remote.RemoteDataSource
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,17 @@ class DataRepo(
             return instance ?: synchronized(this) {
                 instance ?: DataRepo(remoteDataSource, localDataSource).also { instance = it }
             }
+        }
+    }
+
+    suspend fun saveWeather(
+        current: WeatherCurrent?,
+        forecast: WeatherFiveDays?
+    ) = withContext(Dispatchers.IO) {
+        try {
+            localDataSource.saveWeather(current, forecast)
+        } catch (e: Exception) {
+            Log.e("DataRepo", "Error saving weather data: ${e.message}", e)
         }
     }
 
@@ -108,6 +120,23 @@ class DataRepo(
             }
         } catch (e: Exception) {
             Log.e("DataRepo", "Error fetching all cached weather: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAllWeatherEntities(): Result<List<WeatherEntity>> = withContext(Dispatchers.IO) {
+        try {
+            Log.d("DataRepo", "Fetching all cached weather entities")
+            val cachedEntities = localDataSource.getAllWeatherEntities()
+            if (cachedEntities.isNotEmpty()) {
+                Log.d("DataRepo", "Found ${cachedEntities.size} cached weather entities")
+                Result.success(cachedEntities)
+            } else {
+                Log.w("DataRepo", "No cached weather entities available")
+                Result.failure(Exception("No cached weather entities"))
+            }
+        } catch (e: Exception) {
+            Log.e("DataRepo", "Error fetching cached weather entities: ${e.message}", e)
             Result.failure(e)
         }
     }

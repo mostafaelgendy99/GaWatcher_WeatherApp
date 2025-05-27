@@ -13,5 +13,5 @@ data class WeatherEntity(
     val currentWeather: WeatherCurrent?,
     @TypeConverters(WeatherTypeConverters::class)
     val forecastWeather: WeatherFiveDays?,
-    val timestamp: Long
+    val timestamp: Long = 0
 )

@@ -27,6 +27,12 @@ class LocalDataSource(private val weatherDao: WeatherDao) {
         }
     }
 
+    suspend fun getAllWeatherEntities(): List<WeatherEntity> {
+        return withContext(Dispatchers.IO) {
+            weatherDao.getAllWeather()
+        }
+    }
+
     suspend fun getAllWeather(): List<Pair<WeatherCurrent?, WeatherFiveDays?>> {
         return withContext(Dispatchers.IO) {
             weatherDao.getAllWeather().map { it.currentWeather to it.forecastWeather }

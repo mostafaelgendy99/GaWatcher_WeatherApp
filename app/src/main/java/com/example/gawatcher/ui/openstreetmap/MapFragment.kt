@@ -4,11 +4,13 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.example.gawatcher.databinding.FragmentMapBinding
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
@@ -20,6 +22,12 @@ import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.events.MapEventsReceiver
 import androidx.navigation.fragment.findNavController
 import com.example.gawatcher.R
+import com.example.gawatcher.model.local.LocalDataSource
+import com.example.gawatcher.model.local.WeatherDatabase
+import com.example.gawatcher.model.remote.RemoteDataSource
+import com.example.gawatcher.model.repo.DataRepo
+import com.example.gawatcher.ui.home.HomeViewModel
+import com.example.gawatcher.ui.home.HomeViewModelFactory
 
 
 class MapFragment : Fragment() {
@@ -29,12 +37,23 @@ class MapFragment : Fragment() {
     private var selectedLat: Double? = null
     private var selectedLon: Double? = null
     private lateinit var mapView: MapView
+    private lateinit var senderId: String
+    private val viewModel: MapViewModel by viewModels {
+        MapViewModelFactory(
+            DataRepo.getInstance(
+                RemoteDataSource(),
+                LocalDataSource(WeatherDatabase.getDatabase(requireContext()).weatherDao())
+            )
+        )
+    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        senderId = arguments?.getString("sender_id") ?: "default"
         _binding = FragmentMapBinding.inflate(inflater, container, false)
         val context = requireContext()
         Configuration.getInstance().load(context, context.getSharedPreferences("osm_prefs", 0))
@@ -74,17 +93,39 @@ class MapFragment : Fragment() {
 
         val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
         mapView.overlays.add(mapEventsOverlay)
+//
 
         // Handle Select Location button click
-        binding.btnSelectLocation.setOnClickListener {
-            if (selectedLat != null && selectedLon != null) {
-                val bundle = Bundle().apply {
-                    putDouble("latitude", selectedLat!!)
-                    putDouble("longitude", selectedLon!!)
+        if(senderId == "FavoritesFragment") {
+            binding.btnSelectLocation.text = "Add to Favorites"
+            binding.btnSelectLocation.setOnClickListener{
+                if (selectedLat != null && selectedLon != null) {
+                    viewModel.insertLocation(selectedLat!!,selectedLon!!)
+                    viewModel.insertedStatus.observe(viewLifecycleOwner){value->
+                        if(value == false){
+                            Toast.makeText(context, "Can't insert location", Toast.LENGTH_SHORT).show()
+                        }
+                        else{
+                            Log.i("MapFragment", "Location inserted successfully")
+                            findNavController().navigate(R.id.nav_favorites)
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, "Please long-press on the map to select a location", Toast.LENGTH_SHORT).show()
                 }
-                findNavController().navigate(R.id.nav_home, bundle)
-            } else {
-                Toast.makeText(context, "Please long-press on the map to select a location", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else {
+            binding.btnSelectLocation.setOnClickListener {
+                if (selectedLat != null && selectedLon != null) {
+                    val bundle = Bundle().apply {
+                        putDouble("latitude", selectedLat!!)
+                        putDouble("longitude", selectedLon!!)
+                    }
+                    findNavController().navigate(R.id.nav_home, bundle)
+                } else {
+                    Toast.makeText(context, "Please long-press on the map to select a location", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 

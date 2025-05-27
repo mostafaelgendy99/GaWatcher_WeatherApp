@@ -41,7 +41,7 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
     init {
         // Initialize with error message until location is provided
         _uiState.value = WeatherUiState(
-            errorMessage = "Location needed to show weather data. Please grant location access."
+            errorMessage = "Loading weather "
         )
         _hourlyForecast.value = emptyList()
         _dailyForecast.value = emptyList()

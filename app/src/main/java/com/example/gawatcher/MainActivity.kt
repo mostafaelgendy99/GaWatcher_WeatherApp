@@ -13,6 +13,7 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.ui.NavigationUI
 import com.example.gawatcher.databinding.ActivityMainBinding
 import com.example.gawatcher.gendykey._apikey
 import com.example.gawatcher.model.local.LocalDataSource
@@ -64,6 +65,51 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+
+        navView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_home -> {
+                    val bundle = Bundle().apply {
+                        putDouble("latitude", 0.0)
+                        putDouble("longitude", 0.0)
+                    }
+                    navController.navigate(R.id.nav_home, bundle)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+
+                R.id.nav_map -> {
+                    val bundle = Bundle().apply {
+                        putString("senderId", "NavDrawer")
+                    }
+                    navController.navigate(R.id.nav_map, bundle)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+
+                R.id.nav_favorites -> {
+                    navController.navigate(R.id.nav_favorites)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+
+                R.id.nav_alerts -> {
+                    navController.navigate(R.id.nav_alerts)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+
+                R.id.nav_settings -> {
+                    navController.navigate(R.id.nav_settings)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+
 
 
     }
