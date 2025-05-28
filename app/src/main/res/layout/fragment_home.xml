@@ -53,7 +53,7 @@
                         android:id="@+id/tvCityName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="City Name"
+                        android:text="@string/city_name"
                         android:textSize="20sp"
                         android:textColor="@color/blue"
                         android:textStyle="bold"
@@ -63,7 +63,7 @@
                         android:id="@+id/tvTemperature"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="25°C"
+                        android:text="@string/_25_c"
                         android:textSize="48sp"
                         android:textColor="@color/light_black"
                         android:textStyle="bold"
@@ -73,7 +73,7 @@
                         android:id="@+id/tvWeatherCondition"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Sunny"
+                        android:text="@string/sunny"
                         android:textSize="16sp"
                         android:textColor="@color/light_black"
                         android:layout_marginTop="4dp" />
@@ -112,7 +112,7 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:src="@drawable/ic_wind"
-                            android:contentDescription="Wind Icon"
+                            android:contentDescription="@string/wind_icon"
                             android:padding="4dp" />
 
                         <TextView
@@ -120,12 +120,12 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="12 km/h"
+                            android:text="@string/_12_km_h"
                             android:textColor="@color/light_black"
                             android:textSize="12sp" />
 
                         <TextView
-                            android:text="Wind"
+                            android:text="@string/wind"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textSize="12sp"
@@ -154,20 +154,20 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:src="@drawable/ic_pressure"
-                            android:contentDescription="Pressure Icon"
+                            android:contentDescription="@string/pressure_icon"
                             android:padding="4dp" />
 
                         <TextView
                             android:id="@+id/tvPressure"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1013 hPa"
+                            android:text="@string/_1013_hpa"
                             android:textSize="14sp"
                             android:textColor="@color/light_black"
                             android:layout_marginTop="4dp" />
 
                         <TextView
-                            android:text="Pressure"
+                            android:text="@string/pressure"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textSize="12sp"
@@ -196,20 +196,20 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:src="@drawable/ic_humidity"
-                            android:contentDescription="Humidity Icon"
+                            android:contentDescription="@string/humidity_icon"
                             android:padding="4dp" />
 
                         <TextView
                             android:id="@+id/tvHumidity"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="50%"
+                            android:text="@string/_50"
                             android:textSize="14sp"
                             android:textColor="@color/light_black"
                             android:layout_marginTop="4dp" />
 
                         <TextView
-                            android:text="Humidity"
+                            android:text="@string/humidity"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textSize="12sp"
@@ -238,20 +238,20 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:src="@drawable/ic_feelslike"
-                            android:contentDescription="Feels Like Icon"
+                            android:contentDescription="@string/feels_like_icon"
                             android:padding="4dp" />
 
                         <TextView
                             android:id="@+id/tvUV"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="3"
+                            android:text="@string/_3"
                             android:textSize="14sp"
                             android:textColor="@color/light_black"
                             android:layout_marginTop="4dp" />
 
                         <TextView
-                            android:text="Feels Like"
+                            android:text="@string/feels_like"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textSize="12sp"
@@ -283,7 +283,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="Hourly Forecast"
+                        android:text="@string/hourly_forecast"
                         android:textColor="@color/blue"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -320,7 +320,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="5-Day Forecast"
+                        android:text="@string/_5_day_forecast"
                         android:textColor="@color/blue"
                         android:textSize="18sp"
                         android:textStyle="bold" />

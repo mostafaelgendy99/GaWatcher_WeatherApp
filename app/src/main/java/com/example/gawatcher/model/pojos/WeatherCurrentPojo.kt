@@ -3,15 +3,15 @@ package com.example.gawatcher.model.pojos
 import com.google.gson.annotations.SerializedName
 
 data class WeatherCurrent(
-    val coord: Coord,
-    val weather: List<Weather>,
+    val coord: CoordCurrent,
+    val weather: List<WeatherDataCurrent>,
     val base: String,
-    val main: Main,
+    val main: MainCurrent,
     val visibility: Long,
-    val wind: Wind,
-    val clouds: Clouds,
+    val wind: WindCurrent,
+    val clouds: CloudsCurrent,
     val dt: Long,
-    val sys: Sys,
+    val sys: SysCurrent,
     val timezone: Long,
     val id: Long,
     val name: String,

@@ -27,6 +27,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import java.util.Locale
 
 class HomeFragment : Fragment() {
 
@@ -34,11 +35,11 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var hourlyAdapter: HourlyForecastAdapter
     private lateinit var dailyAdapter: DailyForecastAdapter
-    private lateinit var fusedLocationClient: FusedLocationProviderClient //location client for getting user's location
-    private val LOCATION_PERMISSION_CODE = 100 //location permission request code
-    private var lat = arguments?.getDouble("latitude", 0.0)?: 0.0
-    private var lon = arguments?.getDouble("longitude", 0.0)?: 0.0
-    private var weatherId = -1 // Default to invalid ID
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val LOCATION_PERMISSION_CODE = 100
+    private var lat = arguments?.getDouble("latitude", 0.0) ?: 0.0
+    private var lon = arguments?.getDouble("longitude", 0.0) ?: 0.0
+    private var weatherId = -1
     private lateinit var senderId: String
 
     private val viewModel: HomeViewModel by viewModels {
@@ -58,9 +59,19 @@ class HomeFragment : Fragment() {
         senderId = arguments?.getString("sender_id") ?: "default"
         lat = arguments?.getDouble("latitude", 0.0) ?: 0.0
         lon = arguments?.getDouble("longitude", 0.0) ?: 0.0
-        weatherId = arguments?.getInt("weather_id", -1) ?: -1 // Get Room ID
+        weatherId = arguments?.getInt("weather_id", -1) ?: -1
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
+
+        // Load preferences
+        val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+        val tempUnit = sharedPrefs.getString("temp_unit", "celsius")?.lowercase() ?: "celsius"
+        val windUnit = sharedPrefs.getString("wind_unit", "km/h")?.lowercase() ?: "km/h"
+        val language = sharedPrefs.getString("language", "english")?.lowercase() ?: "english"
+
+        // Set locale for formatting
+
+
         try {
             hourlyAdapter = HourlyForecastAdapter()
             dailyAdapter = DailyForecastAdapter()
@@ -74,6 +85,7 @@ class HomeFragment : Fragment() {
                 layoutManager = LinearLayoutManager(context)
                 adapter = dailyAdapter
             }
+
             // Observe UI state
             viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
                 binding.tvCityName.text = uiState.cityName
@@ -102,6 +114,7 @@ class HomeFragment : Fragment() {
                 }
                 Log.d("HomeFragment", "UI updated: city=${uiState.cityName}, temp=${uiState.temperature}, error=${uiState.errorMessage}")
             }
+
             // Observe forecast data
             viewModel.hourlyForecast.observe(viewLifecycleOwner) { hourlyItems ->
                 hourlyAdapter.submitList(hourlyItems)
@@ -115,19 +128,16 @@ class HomeFragment : Fragment() {
             binding.swipeRefreshLayout.setOnRefreshListener {
                 lat = 0.0
                 lon = 0.0
-                weatherId = -1 // Reset ID on refresh
+                weatherId = -1
                 fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
                 checkAndRequestLocationPermissions()
                 (activity as? MainActivity)?.updateToolbarTitle("Home")
                 binding.swipeRefreshLayout.isRefreshing = false
             }
-            // Load preferences and update location
-            val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
-            val tempUnit = sharedPrefs.getString("temp_unit", "celsius") ?: "celsius"
-            val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
 
+            // Update location with language
             if (lat != 0.0 && lon != 0.0) {
-                viewModel.updateLocation(lat, lon, tempUnit, windUnit, weatherId)
+                viewModel.updateLocation(lat, lon, tempUnit, windUnit, language, weatherId)
                 if (senderId == "MapFragment") {
                     (activity as? MainActivity)?.updateToolbarTitle("Map")
                     Log.e("sender", "MapFragment sender detected, updating toolbar title to Map")
@@ -143,7 +153,7 @@ class HomeFragment : Fragment() {
 
         } catch (e: Exception) {
             Log.e("HomeFragment", "Error in onCreateView: ${e.message}", e)
-            binding.tvCityName.text = "Error"
+            binding.tvCityName.text = getString(R.string.city_name)
             binding.tvWeatherCondition.text = "Initialization failed"
         }
 
@@ -184,7 +194,7 @@ class HomeFragment : Fragment() {
             requestLocationUpdates()
         } else {
             Log.e("HomeFragment", "Location permissions denied")
-            binding.tvCityName.text = "Location permissions denied"
+            binding.tvCityName.text = getString(R.string.city_name)
             binding.tvWeatherCondition.text = "Cannot fetch weather"
         }
     }
@@ -201,13 +211,14 @@ class HomeFragment : Fragment() {
                     val longitude = location.longitude
                     Log.d("HomeFragment", "Location received: Lat=$latitude, Long=$longitude")
                     val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
-                    val tempUnit = sharedPrefs.getString("temp_unit", "celsius") ?: "celsius"
-                    val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
-                    viewModel.updateLocation(latitude, longitude, tempUnit, windUnit, -1) // No ID for GPS
+                    val tempUnit = sharedPrefs.getString("temp_unit", "celsius")?.lowercase() ?: "celsius"
+                    val windUnit = sharedPrefs.getString("wind_unit", "km/h")?.lowercase() ?: "km/h"
+                    val language = sharedPrefs.getString("language", "english")?.lowercase() ?: "english"
+                    viewModel.updateLocation(latitude, longitude, tempUnit, windUnit, language, -1)
                     fusedLocationClient.removeLocationUpdates(this)
                 } ?: run {
                     Log.e("HomeFragment", "Location unavailable")
-                    binding.tvCityName.text = "Location unavailable"
+                    binding.tvCityName.text = getString(R.string.city_name)
                     binding.tvWeatherCondition.text = "Cannot show weather"
                 }
             }

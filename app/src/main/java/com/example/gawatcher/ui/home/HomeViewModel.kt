@@ -27,6 +27,8 @@ data class WeatherUiState(
     val errorMessage: String? = null
 )
 
+
+
 class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
 
     private val _uiState = MutableLiveData<WeatherUiState>()
@@ -44,40 +46,38 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         _dailyForecast.value = emptyList()
     }
 
-    fun updateLocation(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, weatherId: Int = -1) {
-        Log.d("HomeViewModel", "Received: Lat=$latitude, Lon=$longitude, TempUnit=$tempUnit, WindUnit=$windUnit, WeatherId=$weatherId")
-        fetchWeatherData(latitude, longitude, tempUnit, windUnit, weatherId)
+    fun updateLocation(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, language: String, weatherId: Int = -1) {
+        Log.d("HomeViewModel", "Received: Lat=$latitude, Lon=$longitude, TempUnit=$tempUnit, WindUnit=$windUnit, Language=$language, WeatherId=$weatherId")
+        fetchWeatherData(latitude, longitude, tempUnit, windUnit, language, weatherId)
     }
 
-    private fun fetchWeatherData(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, weatherId: Int) {
+    private fun fetchWeatherData(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, language: String, weatherId: Int) {
         viewModelScope.launch {
             try {
-                Log.d("HomeViewModel", "Fetching weather for lat=$latitude, lon=$longitude")
-                val currentWeatherResult = dataRepo.getCurrentWeather(latitude, longitude, _apikey)
-                val forecastResult = dataRepo.getWeatherForecast(latitude, longitude, _apikey)
+                Log.d("HomeViewModel", "Fetching weather for lat=$latitude, lon=$longitude, lang=$language")
+                val langCode = if (language.equals("arabic", ignoreCase = true)) "ar" else "en"
+                val currentWeatherResult = dataRepo.getCurrentWeather(latitude, longitude, _apikey, langCode)
+                val forecastResult = dataRepo.getWeatherForecast(latitude, longitude, _apikey, langCode)
                 if (currentWeatherResult.isSuccess && forecastResult.isSuccess) {
                     val currentWeather = currentWeatherResult.getOrNull()
                     val weatherFiveDays = forecastResult.getOrNull()
                     if (currentWeather != null && weatherFiveDays != null) {
-                        processWeatherData(currentWeather, weatherFiveDays, tempUnit, windUnit)
-                        // Save to Room for caching
+                        processWeatherData(currentWeather, weatherFiveDays, tempUnit, windUnit, language)
                         return@launch
                     }
                 }
-                // Retrofit failed, try Room if weatherId is valid
                 Log.e("HomeViewModel", "Retrofit failed, checking Room for weatherId=$weatherId")
                 if (weatherId != -1) {
                     val cachedResult = dataRepo.getCachedWeatherById(weatherId)
                     if (cachedResult.isSuccess) {
                         val (cachedCurrent, cachedForecast) = cachedResult.getOrNull() ?: (null to null)
                         if (cachedCurrent != null && cachedForecast != null) {
-                            processWeatherData(cachedCurrent, cachedForecast, tempUnit, windUnit)
+                            processWeatherData(cachedCurrent, cachedForecast, tempUnit, windUnit, language)
                             Log.d("HomeViewModel", "Loaded cached data for weatherId=$weatherId")
                             return@launch
                         }
                     }
                 }
-                // No data available
                 _uiState.postValue(WeatherUiState(
                     cityName = "No data available",
                     errorMessage = "Unable to fetch weather data. Please check your connection or try again."
@@ -97,8 +97,7 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         }
     }
 
-    private fun processWeatherData(currentWeather: WeatherCurrent, weatherFiveDays: WeatherFiveDays, tempUnit: String, windUnit: String) {
-        // Timezone and icon adjustment
+    private fun processWeatherData(currentWeather: WeatherCurrent, weatherFiveDays: WeatherFiveDays, tempUnit: String, windUnit: String, language: String) {
         val timezoneOffset = currentWeather.timezone ?: 0
         val currentTime = (System.currentTimeMillis() / 1000) + timezoneOffset
         val calendar = Calendar.getInstance().apply { timeInMillis = currentTime * 1000 }
@@ -109,9 +108,9 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         else icon
         Log.d("HomeViewModel", "Current: icon=$icon, isDayTime=$isDayTime")
 
-        // Temperature and wind speed conversion
         val isCelsius = tempUnit.equals("celsius", ignoreCase = true)
         val isKmh = windUnit.equals("km/h", ignoreCase = true)
+        val locale = if (language.equals("arabic", ignoreCase = true)) Locale("ar") else Locale("en")
 
         val temp = if (isCelsius) currentWeather.main.temp else (currentWeather.main.temp * 9/5) + 32
         val feelsLike = if (isCelsius) currentWeather.main.feelsLike else (currentWeather.main.feelsLike * 9/5) + 32
@@ -119,23 +118,21 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         val windSpeed = if (isKmh) currentWeather.wind.speed * 3.6 else currentWeather.wind.speed * 2.237
         val windUnitSymbol = if (isKmh) "km/h" else "mph"
 
-        // Current weather
         _uiState.postValue(
             WeatherUiState(
                 cityName = currentWeather.name ?: "Current location",
-                temperature = String.format("%.0f%s", temp, tempUnitSymbol),
-                weatherCondition = currentWeather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
-                wind = String.format("%.1f %s", windSpeed, windUnitSymbol),
-                pressure = "${currentWeather.main.pressure} hPa",
-                humidity = "${currentWeather.main.humidity}%",
-                feelsLike = String.format("%.0f%s", feelsLike, tempUnitSymbol),
+                temperature = String.format(locale, "%.0f%s", temp, tempUnitSymbol),
+                weatherCondition = currentWeather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercaseChar() } ?: "Unknown",
+                wind = String.format(locale, "%.1f %s", windSpeed, windUnitSymbol),
+                pressure = String.format(locale, "%d hPa", currentWeather.main.pressure),
+                humidity = String.format(locale, "%d%%", currentWeather.main.humidity),
+                feelsLike = String.format(locale, "%.0f%s", feelsLike, tempUnitSymbol),
                 iconUrl = "ic_$icon",
                 errorMessage = null
             )
         )
 
-        // Hourly forecast
-        val timeFormat = SimpleDateFormat("h:mm a", Locale.US)
+        val timeFormat = SimpleDateFormat("h:mm a", locale)
         val hourlyItems = weatherFiveDays.list
             .filter { data -> data.timeUnix >= currentTime && data.timeUnix <= currentTime + 24 * 3600 }
             .take(8)
@@ -151,14 +148,13 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
                 Log.d("HomeViewModel", "Hourly: icon=$hourlyIcon, time=${data.timeUnix}, isDayTime=$isForecastDayTime")
                 HourlyForecastItem(
                     time = timeFormat.format(Date(data.timeUnix * 1000)),
-                    temperature = String.format("%.0f%s", hourlyTemp, tempUnitSymbol),
+                    temperature = String.format(locale, "%.0f%s", hourlyTemp, tempUnitSymbol),
                     iconUrl = "ic_$hourlyIcon"
                 )
             }
         _hourlyForecast.postValue(hourlyItems)
 
-        // Daily forecast
-        val dateFormat = SimpleDateFormat("EEE, MMM d", Locale.US)
+        val dateFormat = SimpleDateFormat("EEE, MMM d", locale)
         val dailyItems = mutableListOf<DailyForecastItem>()
         weatherFiveDays.list
             .groupBy { data ->
@@ -184,10 +180,10 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
                     dailyItems.add(
                         DailyForecastItem(
                             date = dateFormat.format(Date(data.timeUnix * 1000)),
-                            weatherState = data.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
+                            weatherState = data.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercaseChar() } ?: "Unknown",
                             iconUrl = "ic_$dailyIcon",
-                            minTemp = String.format("%.0f%s", minTempConverted, tempUnitSymbol),
-                            maxTemp = String.format("%.0f%s", maxTempConverted, tempUnitSymbol)
+                            minTemp = String.format(locale, "%.0f%s", minTempConverted, tempUnitSymbol),
+                            maxTemp = String.format(locale, "%.0f%s", maxTempConverted, tempUnitSymbol)
                         )
                     )
                 }

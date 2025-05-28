@@ -14,22 +14,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <TextView
-        android:id="@+id/selectedCoordinates"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Lat: --, Lon: --"
-        android:layout_margin="8dp"
-        app:layout_constraintBottom_toTopOf="@id/btn_select_location"
-        app:layout_constraintStart_toStartOf="parent"
-        android:textSize="16sp"
-        android:textColor="@color/black"/>
+
 
     <Button
         android:id="@+id/btn_select_location"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Use This Location"
+        android:text="@string/use_this_location"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

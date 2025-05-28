@@ -37,7 +37,7 @@
         android:id="@+id/btnAddFromMap"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Add From Map"
+        android:text="@string/add_from_map"
         android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

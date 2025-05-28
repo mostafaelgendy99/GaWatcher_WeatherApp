@@ -12,7 +12,7 @@
         android:id="@+id/settings_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Settings"
+        android:text="@string/settings"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintTop_toTopOf="parent"
@@ -52,7 +52,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Location"
+                    android:text="@string/location"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -67,7 +67,7 @@
                         android:id="@+id/radio_current"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GPS"
+                        android:text="@string/gps"
                         android:textSize="12sp"
                         android:checked="true"
                         android:layout_marginBottom="8dp"/>
@@ -76,7 +76,7 @@
                         android:id="@+id/radio_map"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Map"
+                        android:text="@string/map"
                         android:textSize="12sp"
                         />
                 </RadioGroup>
@@ -104,13 +104,13 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Language"
+                    android:text="@string/language"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
 
                 <RadioGroup
-                    android:id="@+id/language"
+                    android:id="@+id/languageGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
@@ -119,7 +119,7 @@
                         android:id="@+id/radio_english"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="English"
+                        android:text="@string/english"
                         android:textSize="12sp"
                         android:checked="true"
                         android:layout_marginBottom="8dp"/>
@@ -128,7 +128,7 @@
                         android:id="@+id/radio_arabic"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Arabic"
+                        android:text="@string/arabic"
                         android:textSize="12sp"
                          />
                 </RadioGroup>
@@ -169,7 +169,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Temperature"
+                    android:text="@string/temperature"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -184,7 +184,7 @@
                         android:id="@+id/radio_celsius"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Celsius"
+                        android:text="@string/celsius"
                         android:textSize="12sp"
                         android:checked="true"
                         android:layout_marginBottom="8dp"/>
@@ -195,7 +195,7 @@
                         android:id="@+id/radio_fahrenheit"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Fahrenheit"
+                        android:text="@string/fahrenheit"
                         android:textSize="12sp"
                          />
                 </RadioGroup>
@@ -222,7 +222,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Wind Speed"
+                    android:text="@string/wind_speed"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -237,7 +237,7 @@
                         android:id="@+id/radioKmh"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="km/hour"
+                        android:text="@string/km_hour"
                         android:textSize="12sp"
                         android:checked="true"
                         android:layout_marginBottom="8dp"
@@ -247,7 +247,7 @@
                         android:id="@+id/radioMph"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Mile/hour"
+                        android:text="@string/mile_hour"
                         android:textSize="12sp"
                          />
                 </RadioGroup>
@@ -279,7 +279,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Notifications"
+                android:text="@string/notifications"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
@@ -294,7 +294,7 @@
                     android:id="@+id/radio_notifications_enable"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Enable"
+                    android:text="@string/enable"
                     android:textSize="12sp"
                     android:checked="true"
                     android:layout_marginBottom="8dp"
@@ -304,7 +304,7 @@
                     android:id="@+id/radio_notifications_disable"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Disable"
+                    android:text="@string/disable"
                     android:textSize="12sp"
                     />
             </RadioGroup>

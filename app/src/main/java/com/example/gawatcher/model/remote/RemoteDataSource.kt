@@ -6,10 +6,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 
-class RemoteDataSource {
-    private val apiService: ApiServices = RetrofitClient.weatherApiService
+class RemoteDataSource : IRemoteDataSource {
+     val apiService: ApiServices = RetrofitClient.weatherApiService
 
-    suspend fun getWeatherForecast(lat: Double, lon: Double, apiKey: String , units : String , language: String): Result<WeatherFiveDays> {
+    override suspend fun getWeatherForecast(lat: Double, lon: Double, apiKey: String, units : String, language: String): Result<WeatherFiveDays> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.getWeatherForecast(lat, lon, apiKey)
@@ -24,7 +24,7 @@ class RemoteDataSource {
         }
     }
 
-    suspend fun getCurrentWeather(lat: Double, lon: Double, apiKey: String, units: String, language: String): Result<WeatherCurrent> {
+    override suspend fun getCurrentWeather(lat: Double, lon: Double, apiKey: String, units: String, language: String): Result<WeatherCurrent> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.getCurrentWeather(lat, lon, apiKey)

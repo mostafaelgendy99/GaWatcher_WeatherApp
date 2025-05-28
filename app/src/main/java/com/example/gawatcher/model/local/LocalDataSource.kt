@@ -6,9 +6,9 @@ import com.example.gawatcher.model.pojos.WeatherFiveDays
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class LocalDataSource(private val weatherDao: WeatherDao) {
+class LocalDataSource(private val weatherDao: WeatherDao) : ILocalDataSource {
 
-    suspend fun saveWeather(current: WeatherCurrent?, forecast: WeatherFiveDays?) {
+    override suspend fun saveWeather(current: WeatherCurrent?, forecast: WeatherFiveDays?) {
         withContext(Dispatchers.IO) {
             if (current == null && forecast == null) return@withContext
             val weatherEntity = WeatherEntity(
@@ -20,32 +20,32 @@ class LocalDataSource(private val weatherDao: WeatherDao) {
         }
     }
 
-    suspend fun getWeatherById(id: Int): Pair<WeatherCurrent?, WeatherFiveDays?> {
+    override suspend fun getWeatherById(id: Int): Pair<WeatherCurrent?, WeatherFiveDays?> {
         return withContext(Dispatchers.IO) {
             val entity = weatherDao.getWeatherById(id)
             entity?.let { it.currentWeather to it.forecastWeather } ?: (null to null)
         }
     }
 
-    suspend fun getAllWeatherEntities(): List<WeatherEntity> {
+    override suspend fun getAllWeatherEntities(): List<WeatherEntity> {
         return withContext(Dispatchers.IO) {
             weatherDao.getAllWeather()
         }
     }
 
-    suspend fun getAllWeather(): List<Pair<WeatherCurrent?, WeatherFiveDays?>> {
+    override suspend fun getAllWeather(): List<Pair<WeatherCurrent?, WeatherFiveDays?>> {
         return withContext(Dispatchers.IO) {
             weatherDao.getAllWeather().map { it.currentWeather to it.forecastWeather }
         }
     }
 
-    suspend fun deleteWeatherById(id: Int) {
+    override suspend fun deleteWeatherById(id: Int) {
         withContext(Dispatchers.IO) {
             weatherDao.deleteWeatherById(id)
         }
     }
 
-    suspend fun deleteAllWeather() {
+    override suspend fun deleteAllWeather() {
         withContext(Dispatchers.IO) {
             weatherDao.deleteAllWeather()
         }

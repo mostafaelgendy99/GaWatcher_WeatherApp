@@ -16,6 +16,42 @@
     <string name="menu_alerts">Alerts</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_map">Map</string>
+    <string name="add_from_map">Add From Map</string>
+    <string name="city_name">City Name</string>
+    <string name="_25_c">25°C</string>
+    <string name="sunny">Sunny</string>
+    <string name="wind_icon">Wind Icon</string>
+    <string name="_12_km_h">12 km/h</string>
+    <string name="wind">Wind</string>
+    <string name="pressure_icon">Pressure Icon</string>
+    <string name="_1013_hpa">1013 hPa</string>
+    <string name="pressure">Pressure</string>
+    <string name="humidity_icon">Humidity Icon</string>
+    <string name="_50">50%</string>
+    <string name="humidity">Humidity</string>
+    <string name="feels_like_icon">Feels Like Icon</string>
+    <string name="_3">3</string>
+    <string name="feels_like">Feels Like</string>
+    <string name="hourly_forecast">Hourly Forecast</string>
+    <string name="_5_day_forecast">5-Day Forecast</string>
+    <string name="use_this_location">Use This Location</string>
+    <string name="settings">Settings</string>
+    <string name="location">Location</string>
+    <string name="gps">GPS</string>
+    <string name="map">Map</string>
+    <string name="language">Language</string>
+    <string name="english">English</string>
+    <string name="arabic">Arabic</string>
+    <string name="temperature">Temperature</string>
+    <string name="celsius">Celsius</string>
+    <string name="fahrenheit">Fahrenheit</string>
+    <string name="wind_speed">Wind Speed</string>
+    <string name="km_hour">km/hour</string>
+    <string name="mile_hour">Mile/hour</string>
+    <string name="notifications">Notifications</string>
+    <string name="enable">Enable</string>
+    <string name="disable">Disable</string>
+    <string name="city_country">City, Country</string>
 
 
 </resources>
