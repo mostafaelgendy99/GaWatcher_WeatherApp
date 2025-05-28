@@ -36,6 +36,7 @@ class HourlyForecastAdapter :
                 .load(iconId)
                 .placeholder(R.drawable.icon_01d)
                 .error(R.drawable.icon_01d)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                 .into(ivWeatherIcon)
         }
     }

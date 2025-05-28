@@ -1,6 +1,7 @@
 package com.example.gawatcher.ui.home
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Looper
@@ -8,15 +9,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.example.gawatcher.MainActivity
 import com.example.gawatcher.R
 import com.example.gawatcher.databinding.FragmentHomeBinding
 import com.example.gawatcher.model.local.LocalDataSource
@@ -40,6 +37,7 @@ class HomeFragment : Fragment() {
     private val LOCATION_PERMISSION_CODE = 100 //location permission request code
     private var lat = arguments?.getDouble("latitude", 0.0)?: 0.0
     private var lon = arguments?.getDouble("longitude", 0.0)?: 0.0
+
 
     private val viewModel: HomeViewModel by viewModels {
         HomeViewModelFactory(
@@ -91,18 +89,19 @@ class HomeFragment : Fragment() {
                     iconName,
                     "drawable",
                     context?.packageName
-                )?.takeIf { it != 0 } ?: R.drawable.icon_01d
-                Log.d("HomeFragment", "Loading icon: iconName=$iconName, iconId=$iconId")
+                )?.takeIf { it != 0 } ?: R.drawable.ic_01d
+                Log.d("HomeFragmentIcon", "Loading icon: iconName=$iconName, iconId=$iconId")
                 Glide.with(this)
                     .load(iconId)
-                    .placeholder(R.drawable.icon_01d)
-                    .error(R.drawable.icon_01d)
+                    .placeholder(R.drawable.ic_01d)
+                    .error(R.drawable.ic_01d)
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                     .into(binding.ivWeatherIcon)
                 if (uiState.errorMessage != null) {
                     binding.tvCityName.text = uiState.errorMessage
                     binding.tvWeatherCondition.text = "Error"
                 }
-                Log.d("HomeFragment", "UI updated: city=${uiState.cityName}, temp=${uiState.temperature}, error=${uiState.errorMessage}")
+                Log.d("HomeFragment", "UI updated: city=${uiState.cityName}, temp=${uiState.temperature}, error=${uiState.errorMessage}" )
             }
             // Observe forecast data
             viewModel.hourlyForecast.observe(viewLifecycleOwner) { hourlyItems ->
@@ -125,9 +124,13 @@ class HomeFragment : Fragment() {
                 binding.swipeRefreshLayout.isRefreshing = false
 
             }
+            // Load preferences and update location
+            val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+            val tempUnit = sharedPrefs.getString("temp_unit", "celsius") ?: "celsius"
+            val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
 
             if (lat != 0.0 && lon != 0.0) {
-                viewModel.updateLocation(lat, lon)
+                viewModel.updateLocation(lat, lon, tempUnit, windUnit)
             }
             else {
                 fusedLocationClient =
@@ -198,9 +201,12 @@ class HomeFragment : Fragment() {
                     val longitude = location.longitude
                     Log.d("HomeFragment", "Location received: Lat=$latitude, Long=$longitude")
                     // Pass coordinates to ViewModel
-                    viewModel.updateLocation(latitude, longitude)
-                    // Stop updates after getting the first valid location (optional)
-                    fusedLocationClient.removeLocationUpdates(this)
+                    val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+                    val tempUnit = sharedPrefs.getString("temp_unit", "celsius") ?: "celsius"
+                    val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
+                    // Stop updates after getting the first valid location
+                    viewModel.updateLocation(latitude, longitude, tempUnit, windUnit)
+                                        fusedLocationClient.removeLocationUpdates(this)
                 } ?: run {
                     Log.e("HomeFragment", "Location unavailable")
                     binding.tvCityName.text = "Location unavailable"

@@ -47,55 +47,39 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         _dailyForecast.value = emptyList()
     }
 
-    fun updateLocation(latitude: Double, longitude: Double) {
-        Log.d("HomeViewModel", "Received location: Lat=$latitude, Long=$longitude")
-        fetchWeatherData(latitude, longitude)
+    fun updateLocation(latitude: Double, longitude: Double, tempUnit: String, windUnit: String) {
+        Log.d("HomeViewModel", "Received location: Lat=$latitude, Lon=$longitude, TempUnit=$tempUnit, WindUnit=$windUnit")
+        fetchWeatherData(latitude, longitude, tempUnit, windUnit)
     }
 
-    private fun fetchWeatherData(latitude: Double, longitude: Double) {
+    private fun fetchWeatherData(latitude: Double, longitude: Double, tempUnit: String, windUnit: String) {
         viewModelScope.launch {
             try {
                 Log.d("HomeViewModel", "Fetching weather for lat=$latitude, lon=$longitude")
-                // Fetch current weather
-                val currentWeatherResult = dataRepo.getCurrentWeather(
-                    latitude = latitude,
-                    longitude = longitude,
-                    apiKey = _apikey
-                )
-                // Fetch forecast
-                val forecastResult = dataRepo.getWeatherForecast(
-                    latitude = latitude,
-                    longitude = longitude,
-                    apiKey = _apikey
-                )
+                val currentWeatherResult = dataRepo.getCurrentWeather(latitude, longitude, _apikey)
+                val forecastResult = dataRepo.getWeatherForecast(latitude, longitude, _apikey)
                 if (currentWeatherResult.isSuccess && forecastResult.isSuccess) {
                     val currentWeather = currentWeatherResult.getOrNull()
                     val weatherFiveDays = forecastResult.getOrNull()
                     if (currentWeather != null && weatherFiveDays != null) {
-                        processWeatherData(currentWeather, weatherFiveDays)
+                        processWeatherData(currentWeather, weatherFiveDays, tempUnit, windUnit)
                     } else {
-                        _uiState.postValue(
-                            WeatherUiState(errorMessage = "No weather data available")
-                        )
+                        _uiState.postValue(WeatherUiState(errorMessage = "No weather data available"))
                         _hourlyForecast.postValue(emptyList())
                         _dailyForecast.postValue(emptyList())
-                        Log.e("HomeViewModel", "No current weather or forecast data")
+                        Log.e("HomeViewModel", "No current or forecast data")
                     }
                 } else {
                     val errorMessage = currentWeatherResult.exceptionOrNull()?.message
                         ?: forecastResult.exceptionOrNull()?.message
                         ?: "Network error"
-                    _uiState.postValue(
-                        WeatherUiState(errorMessage = errorMessage)
-                    )
+                    _uiState.postValue(WeatherUiState(errorMessage = errorMessage))
                     _hourlyForecast.postValue(emptyList())
                     _dailyForecast.postValue(emptyList())
                     Log.e("HomeViewModel", "Fetch failed: $errorMessage")
                 }
             } catch (e: Exception) {
-                _uiState.postValue(
-                    WeatherUiState(errorMessage = "Unexpected error: ${e.message}")
-                )
+                _uiState.postValue(WeatherUiState(errorMessage = "Unexpected error: ${e.message}"))
                 _hourlyForecast.postValue(emptyList())
                 _dailyForecast.postValue(emptyList())
                 Log.e("HomeViewModel", "Unexpected error: ${e.message}", e)
@@ -103,88 +87,104 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
         }
     }
 
-    private fun processWeatherData(currentWeather: WeatherCurrent, weatherFiveDays: WeatherFiveDays) {
+    private fun processWeatherData(currentWeather: WeatherCurrent, weatherFiveDays: WeatherFiveDays, tempUnit: String, windUnit: String) {
+        // Timezone and icon adjustment
+        val timezoneOffset = currentWeather.timezone ?: 0
+        val currentTime = (System.currentTimeMillis() / 1000) + timezoneOffset
+        val calendar = Calendar.getInstance().apply { timeInMillis = currentTime * 1000 }
+        val isDayTime = calendar.get(Calendar.HOUR_OF_DAY) in 6..17
+        var icon = currentWeather.weather.firstOrNull()?.icon ?: "01d"
+        icon = if (isDayTime && icon.endsWith("n")) icon.dropLast(1) + "d"
+        else if (!isDayTime && icon.endsWith("d")) icon.dropLast(1) + "n"
+        else icon
+        Log.d("HomeViewModel", "Current: icon=$icon, isDayTime=$isDayTime")
+
+        // Temperature and wind speed conversion
+        val isCelsius = tempUnit.equals("celsius", ignoreCase = true)
+        val isKmh = windUnit.equals("km/h", ignoreCase = true)
+
+        val temp = if (isCelsius) currentWeather.main.temp else (currentWeather.main.temp * 9/5) + 32
+        val feelsLike = if (isCelsius) currentWeather.main.feelsLike else (currentWeather.main.feelsLike * 9/5) + 32
+        val tempUnitSymbol = if (isCelsius) "°C" else "°F"
+        val windSpeed = if (isKmh) currentWeather.wind.speed * 3.6 else currentWeather.wind.speed * 2.237
+        val windUnitSymbol = if (isKmh) "km/h" else "mph"
+
         // Current weather
         _uiState.postValue(
             WeatherUiState(
-                cityName = currentWeather.name ?: "current location",
-                temperature = String.format("%.0f°C", currentWeather.main.temp),
+                cityName = currentWeather.name ?: "Current location",
+                temperature = String.format("%.0f%s", temp, tempUnitSymbol),
                 weatherCondition = currentWeather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
-                wind = String.format("%.1f km/h", currentWeather.wind.speed * 3.6),
+                wind = String.format("%.1f %s", windSpeed, windUnitSymbol),
                 pressure = "${currentWeather.main.pressure} hPa",
                 humidity = "${currentWeather.main.humidity}%",
-                feelsLike = String.format("%.0f°C", currentWeather.main.feelsLike), // Replaced uvIndex with feelsLike
-                iconUrl = currentWeather.weather.firstOrNull()?.icon?.let { "ic_$it" } ?: "ic_01d",
+                feelsLike = String.format("%.0f%s", feelsLike, tempUnitSymbol),
+                iconUrl = "ic_$icon",
                 errorMessage = null
             )
         )
-        Log.d("HomeViewModel", "Current: temp=${currentWeather.main.temp}, condition=${currentWeather.weather.firstOrNull()?.description}, icon=${currentWeather.weather.firstOrNull()?.icon}")
 
-        // Hourly forecast (next 24 hours, limited to 8 items)
-        val currentTime = System.currentTimeMillis() / 1000 // Current time in seconds
+        // Hourly forecast
+        val timeFormat = SimpleDateFormat("h:mm a", Locale.US)
         val hourlyItems = weatherFiveDays.list
-            .filter { data ->
-                val timeUnix = data.timeUnix
-                timeUnix >= currentTime && timeUnix <= currentTime + 24 * 3600 // Within next 24 hours
-            }
-            .take(8) // Ensure max 8 items
+            .filter { data -> data.timeUnix >= currentTime && data.timeUnix <= currentTime + 24 * 3600 }
+            .take(8)
             .mapNotNull { data ->
-                val icon = data.weather.firstOrNull()?.icon ?: return@mapNotNull null
-                val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(
-                    Date(data.timeUnix * 1000)
-                )
-                val iconUrl = "ic_$icon"
+                var hourlyIcon = data.weather.firstOrNull()?.icon ?: return@mapNotNull null
+                val forecastTime = data.timeUnix + timezoneOffset
+                val isForecastDayTime = Calendar.getInstance().apply { timeInMillis = forecastTime * 1000 }
+                    .get(Calendar.HOUR_OF_DAY) in 6..17
+                hourlyIcon = if (isForecastDayTime && hourlyIcon.endsWith("n")) hourlyIcon.dropLast(1) + "d"
+                else if (!isForecastDayTime && hourlyIcon.endsWith("d")) hourlyIcon.dropLast(1) + "n"
+                else hourlyIcon
+                val hourlyTemp = if (isCelsius) data.main.temp else (data.main.temp * 9/5) + 32
+                Log.d("HomeViewModel", "Hourly: icon=$hourlyIcon, time=${data.timeUnix}, isDayTime=$isForecastDayTime")
                 HourlyForecastItem(
-                    time = time,
-                    temperature = String.format("%.0f°C", data.main.temp),
-                    iconUrl = iconUrl
+                    time = timeFormat.format(Date(data.timeUnix * 1000)),
+                    temperature = String.format("%.0f%s", hourlyTemp, tempUnitSymbol),
+                    iconUrl = "ic_$hourlyIcon"
                 )
             }
         _hourlyForecast.postValue(hourlyItems)
-        Log.d("HomeViewModel", "Hourly forecast: ${hourlyItems.size} items")
 
-        // Daily forecast (5 days, with min/max temp and weather state)
+        // Daily forecast
+        val dateFormat = SimpleDateFormat("EEE, MMM d", Locale.US)
         val dailyItems = mutableListOf<DailyForecastItem>()
-        val calendar = Calendar.getInstance()
-        val dateFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
         weatherFiveDays.list
             .groupBy { data ->
-                calendar.timeInMillis = data.timeUnix * 1000
-                calendar.get(Calendar.DAY_OF_YEAR)
+                Calendar.getInstance().apply { timeInMillis = (data.timeUnix + timezoneOffset) * 1000 }
+                    .get(Calendar.DAY_OF_YEAR)
             }
             .toSortedMap()
             .values
             .take(5)
             .forEach { dayData ->
-                // Find representative data (around noon) for weather state and icon
                 val noonData = dayData.minByOrNull { data ->
-                    val time = Calendar.getInstance().apply {
-                        timeInMillis = data.timeUnix * 1000
-                    }
+                    val time = Calendar.getInstance().apply { timeInMillis = (data.timeUnix + timezoneOffset) * 1000 }
                     kotlin.math.abs(time.get(Calendar.HOUR_OF_DAY) - 12)
                 }
-                // Calculate min and max temperatures for the day
                 val minTemp = dayData.minOfOrNull { it.main.temp } ?: return@forEach
                 val maxTemp = dayData.maxOfOrNull { it.main.temp } ?: return@forEach
                 noonData?.let { data ->
-                    val icon = data.weather.firstOrNull()?.icon ?: return@let
-                    val weatherState = data.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown"
-                    val date = dateFormat.format(Date(data.timeUnix * 1000))
-                    val iconUrl = "ic_$icon"
+                    var dailyIcon = data.weather.firstOrNull()?.icon ?: "01d"
+                    dailyIcon = if (dailyIcon.endsWith("n")) dailyIcon.dropLast(1) + "d" else dailyIcon
+                    val minTempConverted = if (isCelsius) minTemp else (minTemp * 9/5) + 32
+                    val maxTempConverted = if (isCelsius) maxTemp else (maxTemp * 9/5) + 32
+                    Log.d("HomeViewModel", "Daily: icon=$dailyIcon, time=${data.timeUnix}")
                     dailyItems.add(
                         DailyForecastItem(
-                            date = date,
-                            weatherState = weatherState,
-                            iconUrl = iconUrl,
-                            minTemp = String.format("%.0f°C", minTemp),
-                            maxTemp = String.format("%.0f°C", maxTemp)
+                            date = dateFormat.format(Date(data.timeUnix * 1000)),
+                            weatherState = data.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() } ?: "Unknown",
+                            iconUrl = "ic_$dailyIcon",
+                            minTemp = String.format("%.0f%s", minTempConverted, tempUnitSymbol),
+                            maxTemp = String.format("%.0f%s", maxTempConverted, tempUnitSymbol)
                         )
                     )
                 }
             }
         _dailyForecast.postValue(dailyItems)
-        Log.d("HomeViewModel", "Daily forecast: ${dailyItems.size} items")
     }
 }
+
 
 
