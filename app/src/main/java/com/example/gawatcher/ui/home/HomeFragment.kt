@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.example.gawatcher.MainActivity
 import com.example.gawatcher.R
 import com.example.gawatcher.databinding.FragmentHomeBinding
 import com.example.gawatcher.model.local.LocalDataSource
@@ -37,7 +38,8 @@ class HomeFragment : Fragment() {
     private val LOCATION_PERMISSION_CODE = 100 //location permission request code
     private var lat = arguments?.getDouble("latitude", 0.0)?: 0.0
     private var lon = arguments?.getDouble("longitude", 0.0)?: 0.0
-
+    private var weatherId = -1 // Default to invalid ID
+    private lateinit var senderId: String
 
     private val viewModel: HomeViewModel by viewModels {
         HomeViewModelFactory(
@@ -48,23 +50,20 @@ class HomeFragment : Fragment() {
         )
     }
 
-
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        lat = arguments?.getDouble("latitude", 0.0)?: 0.0
-        lon = arguments?.getDouble("longitude", 0.0)?: 0.0
-
+        senderId = arguments?.getString("sender_id") ?: "default"
+        lat = arguments?.getDouble("latitude", 0.0) ?: 0.0
+        lon = arguments?.getDouble("longitude", 0.0) ?: 0.0
+        weatherId = arguments?.getInt("weather_id", -1) ?: -1 // Get Room ID
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         try {
             hourlyAdapter = HourlyForecastAdapter()
             dailyAdapter = DailyForecastAdapter()
-
-
 
             // Setup RecyclerViews
             binding.rvHourlyForecast.apply {
@@ -83,7 +82,7 @@ class HomeFragment : Fragment() {
                 binding.tvWind.text = uiState.wind
                 binding.tvPressure.text = uiState.pressure
                 binding.tvHumidity.text = uiState.humidity
-                binding.tvUV.text = uiState.feelsLike                // Load current weather icon from uiState
+                binding.tvUV.text = uiState.feelsLike
                 val iconName = uiState.iconUrl
                 val iconId = context?.resources?.getIdentifier(
                     iconName,
@@ -98,10 +97,10 @@ class HomeFragment : Fragment() {
                     .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                     .into(binding.ivWeatherIcon)
                 if (uiState.errorMessage != null) {
-                    binding.tvCityName.text = uiState.errorMessage
-                    binding.tvWeatherCondition.text = "Error"
+                    binding.tvCityName.text = uiState.cityName
+                    binding.tvWeatherCondition.text = uiState.errorMessage
                 }
-                Log.d("HomeFragment", "UI updated: city=${uiState.cityName}, temp=${uiState.temperature}, error=${uiState.errorMessage}" )
+                Log.d("HomeFragment", "UI updated: city=${uiState.cityName}, temp=${uiState.temperature}, error=${uiState.errorMessage}")
             }
             // Observe forecast data
             viewModel.hourlyForecast.observe(viewLifecycleOwner) { hourlyItems ->
@@ -114,15 +113,13 @@ class HomeFragment : Fragment() {
             }
 
             binding.swipeRefreshLayout.setOnRefreshListener {
-            // Reset lat/lon from bundle (or 0 if not present)
-                lat  = 0.0
+                lat = 0.0
                 lon = 0.0
-                fusedLocationClient =
-                    LocationServices.getFusedLocationProviderClient(requireActivity())
+                weatherId = -1 // Reset ID on refresh
+                fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
                 checkAndRequestLocationPermissions()
-                // Stop refreshing in callback inside location result
+                (activity as? MainActivity)?.updateToolbarTitle("Home")
                 binding.swipeRefreshLayout.isRefreshing = false
-
             }
             // Load preferences and update location
             val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
@@ -130,12 +127,18 @@ class HomeFragment : Fragment() {
             val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
 
             if (lat != 0.0 && lon != 0.0) {
-                viewModel.updateLocation(lat, lon, tempUnit, windUnit)
-            }
-            else {
-                fusedLocationClient =
-                    LocationServices.getFusedLocationProviderClient(requireActivity())
+                viewModel.updateLocation(lat, lon, tempUnit, windUnit, weatherId)
+                if (senderId == "MapFragment") {
+                    (activity as? MainActivity)?.updateToolbarTitle("Map")
+                    Log.e("sender", "MapFragment sender detected, updating toolbar title to Map")
+                } else {
+                    (activity as? MainActivity)?.updateToolbarTitle("Favorites")
+                    Log.e("sender", "FavoritesFragment sender detected, updating toolbar title to Favorites")
+                }
+            } else {
+                fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
                 checkAndRequestLocationPermissions()
+                (activity as? MainActivity)?.updateToolbarTitle("Home")
             }
 
         } catch (e: Exception) {
@@ -157,10 +160,8 @@ class HomeFragment : Fragment() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            // Permissions granted, get location
             requestLocationUpdates()
         } else {
-            // Request permissions
             requestPermissions(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -180,7 +181,6 @@ class HomeFragment : Fragment() {
         if (requestCode == LOCATION_PERMISSION_CODE && grantResults.isNotEmpty() &&
             grantResults.all { it == PackageManager.PERMISSION_GRANTED }
         ) {
-            // Permissions granted, get location
             requestLocationUpdates()
         } else {
             Log.e("HomeFragment", "Location permissions denied")
@@ -200,13 +200,11 @@ class HomeFragment : Fragment() {
                     val latitude = location.latitude
                     val longitude = location.longitude
                     Log.d("HomeFragment", "Location received: Lat=$latitude, Long=$longitude")
-                    // Pass coordinates to ViewModel
                     val sharedPrefs = requireActivity().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
                     val tempUnit = sharedPrefs.getString("temp_unit", "celsius") ?: "celsius"
                     val windUnit = sharedPrefs.getString("wind_unit", "km/h") ?: "km/h"
-                    // Stop updates after getting the first valid location
-                    viewModel.updateLocation(latitude, longitude, tempUnit, windUnit)
-                                        fusedLocationClient.removeLocationUpdates(this)
+                    viewModel.updateLocation(latitude, longitude, tempUnit, windUnit, -1) // No ID for GPS
+                    fusedLocationClient.removeLocationUpdates(this)
                 } ?: run {
                     Log.e("HomeFragment", "Location unavailable")
                     binding.tvCityName.text = "Location unavailable"

@@ -121,6 +121,7 @@ class MapFragment : Fragment() {
                     val bundle = Bundle().apply {
                         putDouble("latitude", selectedLat!!)
                         putDouble("longitude", selectedLon!!)
+                        putString("sender_id", "MapFragment")
                     }
                     findNavController().navigate(R.id.nav_home, bundle)
                 } else {

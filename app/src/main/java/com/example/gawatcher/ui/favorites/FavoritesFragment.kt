@@ -64,6 +64,8 @@ class FavoritesFragment : Fragment() {
                     val bundle = Bundle().apply {
                         putDouble("latitude", coord.lat)
                         putDouble("longitude", coord.lon)
+                        putInt("weather_id", weatherEntity.id)
+                        putString("sender_id", "FavoritesFragment")
                     }
                     findNavController().navigate(R.id.nav_home, bundle)
                 } ?: Toast.makeText(context, "Location data unavailable", Toast.LENGTH_SHORT).show()

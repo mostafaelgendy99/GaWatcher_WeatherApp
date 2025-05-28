@@ -16,14 +16,14 @@ import java.util.Date
 import java.util.Locale
 
 data class WeatherUiState(
-    val cityName: String = "Cairo",
-    val temperature: String = "--°C",
+    val cityName: String = "Fetching location...",
+    val temperature: String = "--",
     val weatherCondition: String = "Unknown",
-    val wind: String = "-- km/h",
+    val wind: String = "--",
     val pressure: String = "-- hPa",
     val humidity: String = "--%",
-    val feelsLike: String = "--°C",
-    val iconUrl: String = "ic_10d", // Added iconUrl with default
+    val feelsLike: String = "--",
+    val iconUrl: String = "ic_10d",
     val errorMessage: String? = null
 )
 
@@ -39,20 +39,17 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
     val dailyForecast: LiveData<List<DailyForecastItem>> = _dailyForecast
 
     init {
-        // Initialize with error message until location is provided
-        _uiState.value = WeatherUiState(
-            errorMessage = "Loading weather "
-        )
+        _uiState.value = WeatherUiState(errorMessage = "Loading weather data...")
         _hourlyForecast.value = emptyList()
         _dailyForecast.value = emptyList()
     }
 
-    fun updateLocation(latitude: Double, longitude: Double, tempUnit: String, windUnit: String) {
-        Log.d("HomeViewModel", "Received location: Lat=$latitude, Lon=$longitude, TempUnit=$tempUnit, WindUnit=$windUnit")
-        fetchWeatherData(latitude, longitude, tempUnit, windUnit)
+    fun updateLocation(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, weatherId: Int = -1) {
+        Log.d("HomeViewModel", "Received: Lat=$latitude, Lon=$longitude, TempUnit=$tempUnit, WindUnit=$windUnit, WeatherId=$weatherId")
+        fetchWeatherData(latitude, longitude, tempUnit, windUnit, weatherId)
     }
 
-    private fun fetchWeatherData(latitude: Double, longitude: Double, tempUnit: String, windUnit: String) {
+    private fun fetchWeatherData(latitude: Double, longitude: Double, tempUnit: String, windUnit: String, weatherId: Int) {
         viewModelScope.launch {
             try {
                 Log.d("HomeViewModel", "Fetching weather for lat=$latitude, lon=$longitude")
@@ -63,23 +60,36 @@ class HomeViewModel(val dataRepo: DataRepo) : ViewModel() {
                     val weatherFiveDays = forecastResult.getOrNull()
                     if (currentWeather != null && weatherFiveDays != null) {
                         processWeatherData(currentWeather, weatherFiveDays, tempUnit, windUnit)
-                    } else {
-                        _uiState.postValue(WeatherUiState(errorMessage = "No weather data available"))
-                        _hourlyForecast.postValue(emptyList())
-                        _dailyForecast.postValue(emptyList())
-                        Log.e("HomeViewModel", "No current or forecast data")
+                        // Save to Room for caching
+                        return@launch
                     }
-                } else {
-                    val errorMessage = currentWeatherResult.exceptionOrNull()?.message
-                        ?: forecastResult.exceptionOrNull()?.message
-                        ?: "Network error"
-                    _uiState.postValue(WeatherUiState(errorMessage = errorMessage))
-                    _hourlyForecast.postValue(emptyList())
-                    _dailyForecast.postValue(emptyList())
-                    Log.e("HomeViewModel", "Fetch failed: $errorMessage")
                 }
+                // Retrofit failed, try Room if weatherId is valid
+                Log.e("HomeViewModel", "Retrofit failed, checking Room for weatherId=$weatherId")
+                if (weatherId != -1) {
+                    val cachedResult = dataRepo.getCachedWeatherById(weatherId)
+                    if (cachedResult.isSuccess) {
+                        val (cachedCurrent, cachedForecast) = cachedResult.getOrNull() ?: (null to null)
+                        if (cachedCurrent != null && cachedForecast != null) {
+                            processWeatherData(cachedCurrent, cachedForecast, tempUnit, windUnit)
+                            Log.d("HomeViewModel", "Loaded cached data for weatherId=$weatherId")
+                            return@launch
+                        }
+                    }
+                }
+                // No data available
+                _uiState.postValue(WeatherUiState(
+                    cityName = "No data available",
+                    errorMessage = "Unable to fetch weather data. Please check your connection or try again."
+                ))
+                _hourlyForecast.postValue(emptyList())
+                _dailyForecast.postValue(emptyList())
+                Log.e("HomeViewModel", "No data available: Retrofit failed and no cached data for weatherId=$weatherId")
             } catch (e: Exception) {
-                _uiState.postValue(WeatherUiState(errorMessage = "Unexpected error: ${e.message}"))
+                _uiState.postValue(WeatherUiState(
+                    cityName = "No data available",
+                    errorMessage = "Unexpected error: ${e.message}"
+                ))
                 _hourlyForecast.postValue(emptyList())
                 _dailyForecast.postValue(emptyList())
                 Log.e("HomeViewModel", "Unexpected error: ${e.message}", e)
